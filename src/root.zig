@@ -4,8 +4,8 @@ const Allocator = std.mem.Allocator;
 
 const COW_TEMPLATE =
     \\        $thoughts   ^__^
-    \\         $thoughts  ($eyes)\\_______
-    \\            (__)\\       )\\/\\
+    \\         $thoughts  ($eyes)\_______
+    \\            (__)\       )\/\
     \\             $tongue ||----w |
     \\                ||     ||
 ;
@@ -35,9 +35,9 @@ fn parseOptions(input: anytype) CowsayOptions {
     const inputType = @typeInfo(InputType);
 
     var result = CowsayOptions{
-        .eyes = "",
+        .eyes = "oo",
         .thought_slash = "\\",
-        .tongue = "",
+        .tongue = "  ",
     };
 
     switch (inputType) {
@@ -64,7 +64,7 @@ fn parseOptions(input: anytype) CowsayOptions {
 
 const CharArrayList = std.ArrayList(u8);
 
-fn parseToken(token: []const u8, opt: *const CowsayOptions) *const []u8 {
+fn parseToken(token: [:0]const u8, opt: *const CowsayOptions) []const u8 {
     if (std.mem.eql(u8, token, "thoughts")) {
         return opt.thought_slash;
     }
@@ -85,6 +85,16 @@ const LineWrapReturn = struct {
     max_width: usize,
 };
 
+fn updateMaxLineWidth(cur_max: usize, start: usize, end: usize) usize {
+    const width = end - start;
+
+    if (cur_max < width) {
+        return width;
+    }
+
+    return cur_max;
+}
+
 fn wrapLines(allocator: Allocator, message: []const u8) Allocator.Error!LineWrapReturn {
     var line_list = std.ArrayList([]const u8).init(allocator);
 
@@ -93,7 +103,8 @@ fn wrapLines(allocator: Allocator, message: []const u8) Allocator.Error!LineWrap
 
     var i: usize = 0;
 
-    var max_width: usize = 0;
+    var max_line_width: usize = 0;
+    const max_width = MAX_WIDTH - 4;
 
     while (i < message.len) : (i += 1) {
         const ch = message[i];
@@ -105,6 +116,7 @@ fn wrapLines(allocator: Allocator, message: []const u8) Allocator.Error!LineWrap
             '\n' => {
                 end = i;
                 try line_list.append(message[start..end]);
+                max_line_width = updateMaxLineWidth(max_line_width, start, end);
                 start = end + 1;
             },
             0 => {
@@ -112,22 +124,17 @@ fn wrapLines(allocator: Allocator, message: []const u8) Allocator.Error!LineWrap
             },
             else => {
                 const w = i - start;
-                if (w > MAX_WIDTH) {
-                    var break_word: bool = false;
-
-                    break_word = end - start < MAX_WIDTH / 2;
-
+                if (w > max_width) {
                     var line_width = end - start;
 
-                    if (line_width < MAX_WIDTH / 2) {
+                    const break_word = end - start < max_width / 2;
+                    if (line_width < max_width / 2 or break_word) {
                         end = i;
                         line_width = w;
                     }
 
                     try line_list.append(message[start..end]);
-                    if (max_width < line_width) {
-                        max_width = line_width;
-                    }
+                    max_line_width = updateMaxLineWidth(max_line_width, start, end);
 
                     start = end;
                 }
@@ -136,20 +143,22 @@ fn wrapLines(allocator: Allocator, message: []const u8) Allocator.Error!LineWrap
     }
 
     try line_list.append(message[start..i]);
+    max_line_width = updateMaxLineWidth(max_line_width, start, i);
 
     return .{
         .lines = try line_list.toOwnedSlice(),
-        .max_width = max_width,
+        .max_width = max_line_width,
     };
 }
 
-fn addHorizontalBoundary(out_list: *CharArrayList, width: u32) Allocator.Error!void {
+fn addHorizontalBoundary(out_list: *CharArrayList, width: usize) Allocator.Error!void {
     if (width < 3) {
         return;
     }
 
     try out_list.append(' ');
     try out_list.appendNTimes(HORIZONTAL_BOUNDARY, width - 2);
+    try out_list.append('\n');
 }
 
 fn matchBoundary(line_count: usize, line_idx: usize, b: u8, top_b: u8, bottom_b: u8, cont_b: u8) u8 {
@@ -175,27 +184,30 @@ fn matchBoundary(line_count: usize, line_idx: usize, b: u8, top_b: u8, bottom_b:
 }
 
 fn parseBubble(allocator: Allocator, out_list: *CharArrayList, message: []const u8) Allocator.Error!void {
-    const width = MAX_WIDTH;
-
     const ret = try wrapLines(allocator, message);
     const lines = ret.lines;
     defer allocator.free(lines);
 
-    try addHorizontalBoundary(out_list, width);
+    const max_bubble_width = ret.max_width + 4;
+    try addHorizontalBoundary(out_list, max_bubble_width);
 
     var line_idx: usize = 0;
     while (line_idx < lines.len) : (line_idx += 1) {
         try out_list.append(matchBoundary(lines.len, line_idx, LEFT_BOUNDARY, TOP_LEFT_BOUNDARY, BOTTOM_LEFT_BOUNDARY, CONTINUE_BOUNDARY));
+        try out_list.append(' ');
 
         try out_list.appendSlice(lines[line_idx]);
 
+        try out_list.append(' ');
         try out_list.append(matchBoundary(lines.len, line_idx, RIGHT_BOUNDARY, TOP_RIGHT_BOUNDARY, BOTTOM_RIGHT_BOUNDARY, CONTINUE_BOUNDARY));
     }
 
-    try addHorizontalBoundary(out_list, width);
+    try out_list.append('\n');
+
+    try addHorizontalBoundary(out_list, max_bubble_width);
 }
 
-pub fn cowsay(allocator: Allocator, message: ?[]const u8, opt: anytype) Allocator.Error![:0]u8 {
+pub fn cowsay(allocator: Allocator, message: ?[]const u8, opt: anytype) Allocator.Error![]u8 {
     const options = parseOptions(opt);
 
     var output = CharArrayList.init(allocator);
@@ -228,8 +240,10 @@ pub fn cowsay(allocator: Allocator, message: ?[]const u8, opt: anytype) Allocato
 
                 buffer[bi] = 0;
 
-                const result = try parseToken(buffer, &options);
+                const result = parseToken(buffer[0..bi :0], &options);
                 try output.appendSlice(result);
+
+                i = j - 1;
             },
             0 => {
                 break;
