@@ -24,6 +24,7 @@ pub fn main() !void {
 
     while (args.next()) |arg| {
         try message.appendSlice(arg);
+        try message.append(' ');
     }
 
     const output = try cowsay(allocator, message.items, .{});

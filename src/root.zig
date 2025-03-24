@@ -20,9 +20,10 @@ const BOTTOM_RIGHT_BOUNDARY = '/';
 
 const CONTINUE_BOUNDARY = '|';
 
-const HORIZONTAL_BOUNDARY = '_';
+const TOP_HORIZONTAL_BOUNDARY = '_';
+const BOTTOM_HORIZONTAL_BOUNDARY = '-';
 
-const MAX_WIDTH = 100;
+const MAX_WIDTH = 45;
 
 const CowsayOptions = struct {
     eyes: []const u8,
@@ -117,7 +118,8 @@ fn wrapLines(allocator: Allocator, message: []const u8) Allocator.Error!LineWrap
                 end = i;
                 try line_list.append(message[start..end]);
                 max_line_width = updateMaxLineWidth(max_line_width, start, end);
-                start = end + 1;
+                end += 1;
+                start = end;
             },
             0 => {
                 break;
@@ -151,13 +153,21 @@ fn wrapLines(allocator: Allocator, message: []const u8) Allocator.Error!LineWrap
     };
 }
 
-fn addHorizontalBoundary(out_list: *CharArrayList, width: usize) Allocator.Error!void {
+const BoundaryPosition = enum {
+    top,
+    bottom,
+};
+
+fn addHorizontalBoundary(pos: BoundaryPosition, out_list: *CharArrayList, width: usize) Allocator.Error!void {
     if (width < 3) {
         return;
     }
 
     try out_list.append(' ');
-    try out_list.appendNTimes(HORIZONTAL_BOUNDARY, width - 2);
+    try out_list.appendNTimes(switch (pos) {
+        .top => TOP_HORIZONTAL_BOUNDARY,
+        .bottom => BOTTOM_HORIZONTAL_BOUNDARY,
+    }, width - 2);
     try out_list.append('\n');
 }
 
@@ -189,7 +199,7 @@ fn parseBubble(allocator: Allocator, out_list: *CharArrayList, message: []const 
     defer allocator.free(lines);
 
     const max_bubble_width = ret.max_width + 4;
-    try addHorizontalBoundary(out_list, max_bubble_width);
+    try addHorizontalBoundary(.top, out_list, max_bubble_width);
 
     var line_idx: usize = 0;
     while (line_idx < lines.len) : (line_idx += 1) {
@@ -198,13 +208,14 @@ fn parseBubble(allocator: Allocator, out_list: *CharArrayList, message: []const 
 
         try out_list.appendSlice(lines[line_idx]);
 
-        try out_list.append(' ');
+        const printed_len = lines[line_idx].len + 2;
+        try out_list.appendNTimes(' ', max_bubble_width - printed_len - 1);
+
         try out_list.append(matchBoundary(lines.len, line_idx, RIGHT_BOUNDARY, TOP_RIGHT_BOUNDARY, BOTTOM_RIGHT_BOUNDARY, CONTINUE_BOUNDARY));
+        try out_list.append('\n');
     }
 
-    try out_list.append('\n');
-
-    try addHorizontalBoundary(out_list, max_bubble_width);
+    try addHorizontalBoundary(.bottom, out_list, max_bubble_width);
 }
 
 pub fn cowsay(allocator: Allocator, message: ?[]const u8, opt: anytype) Allocator.Error![]u8 {
