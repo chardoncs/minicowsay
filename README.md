@@ -1,0 +1,3 @@
+# minicowsay
+
+Minimal Cowsay implementation.
