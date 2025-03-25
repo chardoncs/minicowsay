@@ -27,7 +27,7 @@ const MAX_WIDTH = 45;
 
 const CowsayOptions = struct {
     eyes: []const u8,
-    thought_slash: []const u8,
+    thoughts: []const u8,
     tongue: []const u8,
 };
 
@@ -37,7 +37,7 @@ fn parseOptions(input: anytype) CowsayOptions {
 
     var result = CowsayOptions{
         .eyes = "oo",
-        .thought_slash = "\\",
+        .thoughts = "\\",
         .tongue = "  ",
     };
 
@@ -48,7 +48,7 @@ fn parseOptions(input: anytype) CowsayOptions {
             }
 
             if (@hasField(InputType, "thought_slash")) {
-                result.thought_slash = @field(struct_info, "thought_slash");
+                result.thoughts = @field(struct_info, "thought_slash");
             }
 
             if (@hasField(InputType, "tongue")) {
@@ -67,7 +67,7 @@ const CharArrayList = std.ArrayList(u8);
 
 fn parseToken(token: [:0]const u8, opt: *const CowsayOptions) []const u8 {
     if (std.mem.eql(u8, token, "thoughts")) {
-        return opt.thought_slash;
+        return opt.thoughts;
     }
 
     if (std.mem.eql(u8, token, "eyes")) {
@@ -219,7 +219,7 @@ fn parseBubble(allocator: Allocator, out_list: *CharArrayList, message: []const 
 }
 
 pub fn cowsay(allocator: Allocator, message: ?[]const u8, opt: anytype) Allocator.Error![]u8 {
-    const options = parseOptions(opt);
+    var options = parseOptions(opt);
 
     var output = CharArrayList.init(allocator);
     var buffer: [41:0]u8 = undefined;
