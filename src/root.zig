@@ -226,6 +226,8 @@ pub fn cowsay(allocator: Allocator, message: ?[]const u8, opt: anytype) Allocato
 
     if (message) |msg| {
         try parseBubble(allocator, &output, msg);
+    } else {
+        options.thoughts = " ";
     }
 
     var i: usize = 0;
