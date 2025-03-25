@@ -27,7 +27,12 @@ pub fn main() !void {
         try message.append(' ');
     }
 
-    const output = try cowsay(allocator, message.items, .{});
+    var message_slice: ?[]u8 = message.items;
+    if (message_slice.?.len < 1) {
+        message_slice = null;
+    }
+
+    const output = try cowsay(allocator, message_slice, .{});
     defer allocator.free(output);
 
     const stdout = std.io.getStdOut().writer();
