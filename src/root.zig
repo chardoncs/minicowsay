@@ -44,15 +44,20 @@ fn parseOptions(input: anytype) CowsayOptions {
     switch (inputType) {
         .@"struct" => |struct_info| {
             if (@hasField(InputType, "eyes")) {
-                result.eyes = @field(struct_info, "eyes");
+                if (@field(struct_info, "eyes")) |eyes| {
+                    result.eyes = eyes;
+                }
             }
 
-            if (@hasField(InputType, "thought_slash")) {
-                result.thoughts = @field(struct_info, "thought_slash");
+            if (@hasField(InputType, "thoughts")) {
+                if (@field(struct_info, "thoughts")) |thoughts| {
+                    result.thoughts = thoughts; }
             }
 
             if (@hasField(InputType, "tongue")) {
-                result.tongue = @field(struct_info, "tongue");
+                if (@field(struct_info, "tongue")) |tongue| {
+                    result.tongue = tongue;
+                }
             }
         },
         else => {
