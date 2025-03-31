@@ -42,21 +42,22 @@ fn parseOptions(input: anytype) CowsayOptions {
     };
 
     switch (inputType) {
-        .@"struct" => |struct_info| {
+        .@"struct" => {
             if (@hasField(InputType, "eyes")) {
-                if (@field(struct_info, "eyes")) |eyes| {
-                    result.eyes = eyes;
+                if (@as(?[*:0]const u8, @ptrCast(@field(input, "eyes")))) |eyes| {
+                    result.eyes = std.mem.span(eyes);
                 }
             }
 
             if (@hasField(InputType, "thoughts")) {
-                if (@field(struct_info, "thoughts")) |thoughts| {
-                    result.thoughts = thoughts; }
+                if (@as(?[*:0]const u8, @ptrCast(@field(input, "thoughts")))) |thoughts| {
+                    result.thoughts = std.mem.span(thoughts);
+                }
             }
 
             if (@hasField(InputType, "tongue")) {
-                if (@field(struct_info, "tongue")) |tongue| {
-                    result.tongue = tongue;
+                if (@as(?[*:0]const u8, @ptrCast(@field(input, "tongue")))) |tongue| {
+                    result.tongue = std.mem.span(tongue);
                 }
             }
         },
