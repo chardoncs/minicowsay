@@ -114,9 +114,7 @@ fn wrapLines(allocator: Allocator, message: []const u8) Allocator.Error!LineWrap
     const max_width = MAX_WIDTH - 4;
 
     while (i < message.len) : (i += 1) {
-        const ch = message[i];
-
-        switch (ch) {
+        switch (message[i]) {
             ' ' => {
                 end = i;
             },
@@ -238,16 +236,14 @@ pub fn cowsay(allocator: Allocator, message: ?[]const u8, opt: anytype) Allocato
 
     var i: usize = 0;
     while (i < COW_TEMPLATE.len) : (i += 1) {
-        const ch = COW_TEMPLATE[i];
-        switch (ch) {
+        switch (COW_TEMPLATE[i]) {
             '$' => {
                 var bi: usize = 0;
                 var j: usize = i + 1;
 
                 while (j < COW_TEMPLATE.len and bi < buffer.len - 1) : (j += 1) {
-                    const token_ch = COW_TEMPLATE[j];
-                    switch (token_ch) {
-                        'a'...'z', 'A'...'Z', '0'...'9' => {
+                    switch (COW_TEMPLATE[j]) {
+                        'a'...'z', 'A'...'Z', '0'...'9' => |token_ch| {
                             buffer[bi] = token_ch;
                             bi += 1;
                         },
@@ -267,7 +263,7 @@ pub fn cowsay(allocator: Allocator, message: ?[]const u8, opt: anytype) Allocato
             0 => {
                 break;
             },
-            else => {
+            else => |ch| {
                 try output.append(ch);
             },
         }
