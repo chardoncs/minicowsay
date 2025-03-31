@@ -34,6 +34,12 @@ pub fn build(b: *std.Build) void {
 
     b.installArtifact(exe);
 
+    _ = b.addModule("minicowsay", .{
+        .root_source_file = b.path("src/root.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
     const run_cmd = b.addRunArtifact(exe);
 
     run_cmd.step.dependOn(b.getInstallStep());
